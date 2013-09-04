@@ -6,13 +6,6 @@
 <meta http-equiv="keywords" content="keyword1,keyword2,keyword3">
 <meta http-equiv="description" content="this is my page">
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
-<style type="text/css">
-#cantainer{border:1px solid black;}
-#cantainer{position: relative;width:600px;height:400px;margin:0 auto;text-align:center;overflow: hidden;}
-/*
-#imgview{position:absolute;background-color:grey;width:100%;top:0;left:0;}
-*/
-</style>
 <script type="text/javascript" src="js/jquery-1.10.2.js"></script>
 <script type="text/javascript" src="js/jquery.easydrag.js"></script>
 <script type="text/javascript" src="js/jQueryRotate.js"></script>
@@ -20,15 +13,35 @@
 <script type="text/javascript">
 	;(function($){
 		//显示缩略图
-		function showSLT(target,img){
+		function showSLT(target,img,opt){
 			return function(){
-				_showSLT(target,img);
+				_showSLT(target,img,opt);
 			}
 		}
 		//缩略图
-		function _showSLT(target,img){
+		function _showSLT(target,img,opt){
 			var bl = (img.height()/img.width()).toFixed(1)*10;
-			console.log(bl);
+			$('<img>').attr('src',img.attr('src'))
+					  .css({
+					  		'position':'absolute',
+					  		'width':opt.sltWidth,
+					  		'height':'auto',
+					  		'right':0,
+					  		'bottom':0,
+					  		'border':'1px solid black',
+					  		'z-index':200
+					  }).appendTo(target);
+		}
+		
+		//显示控制器
+		function imgControl(target){
+			return function(){
+				_imgControl(target);
+			}
+		}
+		//控制器
+		function _imgControl(target){
+			var bl = (img.height()/img.width()).toFixed(1)*10;
 			$('<img>').attr('src',img.attr('src'))
 					  .css({
 					  		'position':'absolute',
@@ -37,24 +50,24 @@
 					  		'right':0,
 					  		'bottom':0,
 					  		'border':'1px solid black',
-					  		'z-index':999
+					  		'z-index':100
 					  }).appendTo(target);
-			/* /增加区域显示
-			$('<div>').css({
-				'position':'absolute',
-		  		'width':'10%',
-		  		'height':bl+'%',
-		  		'right':0,
-		  		'bottom':0,
-		  		'border':'1px solid black',
-		  		'background-color':'rgba(0, 0, 0, 0.2)',
-		  		'z-index':9999
-			}).appendTo(target);*/
 		}
 		
 		
 		
-		$.fn.imgShow = function(src,allowBubbling){
+		$.fn.imgShow = function(src,options){
+			var opt = $.extend({},$.imgShow.options,options);
+			//对当前容器进行调整
+			this.css({
+				'border':'1px solid black',
+				'position':'relative',
+				'width':opt.cwidth,
+				'height':opt.cheight,
+				'margin':'0 auto',
+				'text-align':'center',
+				'overflow':'hidden'
+			});
 			var className = 'imgshow'+new Date().getTime();
 			$('<img>').attr('src',src)
 					  .addClass(className)
@@ -66,16 +79,58 @@
 					  		'left':0
 					  }).appendTo(this);
 			var $img = $('.'+className);
-			$img.easydrag(allowBubbling);
-			setTimeout(showSLT(this,$img),10);
+			//添加移动
+			$img.easydrag(opt.allowBubbling);
+			//添加放大功能
+			imgMouseWheel($img);
+			//显示缩略图
+			if(opt.slt){
+				setTimeout(showSLT(this,$img,opt),10);
+			}
+			//显示控制按钮
+			
 			return $img;
 		}
-	
+		
+		function imgMouseWheel(target){
+			target.bind('mousewheel', function(event, delta, deltaX, deltaY) {
+			    var ofx = event.offsetX;
+			    var ofy = event.offsetY;
+			    var x = target.width();
+			    var y = target.height();
+			    var dx = ofx*($.imgShow.options.dz/x);
+			    var dy = dx*ofy/ofx;
+			    var bl = y/x;
+			    x += delta*$.imgShow.options.dz;
+			    y = x*bl;
+			    target.width(x);
+			    target.height(y);
+			    
+			    target.css('left','+='+(-delta*dx)+'px');
+			    target.css('top','+='+(-delta*dy)+'px');
+			});
+		}
+		$.imgShow = {};
+		$.imgShow.options = {
+			dz:40,      		//放大增量
+			rota:30,			//旋转增量（单位°）
+			slt:true,   		//显示缩略图
+			sltWidth:'10%',		//缩略图宽度
+			allowBubbling:false,//事件冒泡
+			control:true, 		//显示控制键
+			cwidth:800,			//容器的宽度
+			cheight:600 		//容器的高度
+		};
+		
+		
 	})(jQuery);
+	
+	
 	var img = null;
+	
 	$(function(){
-		var src = "images/01.jpg";
-		img = $('#cantainer').imgShow(src);
+		var src = "images/05.jpg";
+		img = $('#cantainer').imgShow(src,{sltWidth:'20%',cwidth:500});
 		
 		$('#ssz30').click(function(){
 			var rota = img.getRotateAngle();
@@ -83,37 +138,26 @@
 			if(rota.length>0){
 				jd += rota[0];
 			}
-			console.dir(rota);
 			img.rotate(jd);
 		})
-		var dz = 40;
-		img.bind('mousewheel', function(event, delta, deltaX, deltaY) {
-		    var ofx = event.offsetX;
-		    var ofy = event.offsetY;
-		    var x = img.width();
-		    var y = img.height();
-		    var dx = ofx*(dz/x);
-		    var dy = dx*ofy/ofx;
-		    var bl = y/x;
-		    x += delta*dz;
-		    y = x*bl;
-		    img.width(x);
-		    img.height(y);
-		    
-		    img.css('left','+='+(-delta*dx)+'px');
-		    img.css('top','+='+(-delta*dy)+'px');
-		});
 	});
 
 </script>
-
+<style type="text/css">
+#control{z-index:300;position: absolute;background-color: rgba(0,0,0,0.5);width:100%}
+</style>
 </head>
 
 <body>
-<div id="control">
-	<input type="button" value="顺时针30°" id="ssz30" />
-</div>
 <div id="cantainer">
+	<div id="control">
+		<input type="button" value="顺时针30°" id="ssz30" title="ctrl + n1"/>
+		<input type="button" value="顺时针30°" id="ssz31" />
+		<input type="button" value="顺时针30°" id="ssz32" />
+		<input type="button" value="顺时针30°" id="ssz33" />
+		<input type="button" value="顺时针30°" id="ssz34" />
+		<input type="button" value="顺时针30°" id="ssz35" />
+	</div>
 </div>
 </body>
 </html>
